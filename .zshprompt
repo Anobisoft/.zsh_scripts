@@ -1,0 +1,21 @@
+TMOUT=1
+
+TRAPALRM() {
+    zle reset-prompt
+}
+
+# Load colors
+autoload -U colors && colors
+
+# Load version control information
+autoload -Uz vcs_info
+precmd() { vcs_info }
+
+# Format the vcs_info_msg_0_ variable
+zstyle ':vcs_info:git:*' formats "%{$fg[blue]%}%r%{$reset_color%}/%{$fg[grey]%}%S %{$fg[green]%}%b%{$reset_color%}%m%u%c%{$reset_color%} "
+
+# Set up the prompt (with git branch name)
+setopt PROMPT_SUBST
+PROMPT='%F{yellow}%D %F{green}%T %F{blue}%1~ %F{red}$%{$reset_color%} '
+RPROMPT=\$vcs_info_msg_0_
+

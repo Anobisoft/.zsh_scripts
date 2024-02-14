@@ -1,0 +1,3 @@
+alias podlint='pod lib lint --allow-warnings --sources=trunk,drom-ios-libs-cocoapodsspecs'
+alias podpush='pod repo push drom-ios-libs-cocoapodsspecs --allow-warnings'
+alias podpub='git checkout dev && git pull && podlint && git checkout master && git pull && git merge --no-edit dev && git push && git tag $(podspecversion) && git push --tags && podpush'
