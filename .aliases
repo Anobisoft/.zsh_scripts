@@ -5,7 +5,7 @@ alias ls='ls --color=auto -G'
 alias diff='diff --color=auto'
 
 # Pods
-alias podspecversion='grep ".version\s*=" *.podspec | egrep -o "[0-9]+(.[0-9]+)*"'
+alias podspecversion='grep "\.version\s*=" *.podspec | egrep -o "[0-9]+(.[0-9]+)*"'
 
 # Xcode
 alias xclear_deriveddata='rm -rf ~/Library/Developer/Xcode/DerivedData/'
