@@ -11,11 +11,18 @@ autoload -U colors && colors
 autoload -Uz vcs_info
 precmd() { vcs_info }
 
+# SSH host
+if [ -n "$SSH_CONNECTION" ]; then
+    SSH_HOST='%F{087}%n%f@%F{cyan}%m '
+else
+    SSH_HOST=''
+fi
+
 # Format the vcs_info_msg_0_ variable
 zstyle ':vcs_info:git:*' formats "%{$fg[blue]%}%r%{$reset_color%}/%{$fg[grey]%}%S %{$fg[green]%}%b%{$reset_color%}%m%u%c%{$reset_color%} "
 
 # Set up the prompt (with git branch name)
 setopt PROMPT_SUBST
-PROMPT='%F{yellow}%D %F{green}%T %F{blue}%1~ %F{red}$%{$reset_color%} '
-RPROMPT=\$vcs_info_msg_0_
+PROMPT='$SSH_HOST%F{green}%D{%Y-%m-%d} %F{084}%T %F{blue}%1~ %F{red}%#%f '
+RPROMPT='$vcs_info_msg_0_'
 
