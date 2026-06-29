@@ -113,18 +113,45 @@ fi
 # === 3. CHANGING DEFAULT SHELL ===
 
 ZSH_PATH=$(which zsh 2>/dev/null)
+
 if [ "$SHELL" != "$ZSH_PATH" ]; then
     echo "Changing default shell to $ZSH_PATH..."
+    
+    # ВРЕМЕННО ОТКЛЮЧАЕМ ПАДЕНИЕ СКРИПТА (Даже если промазали по паролю, скрипт выживет)
+    set +e
+    
     if [[ "$OSTYPE" == "darwin"* ]]; then
-        chsh -s "$ZSH_PATH"
+        # На macOS сначала обязательно добавляем Homebrew-zsh в белый список доверенных шеллов
+        if ! grep -q "$ZSH_PATH" /etc/shells; then
+            echo "Adding $ZSH_PATH to /etc/shells trusted list (requires sudo)..."
+            echo "$ZSH_PATH" | sudo tee -a /etc/shells >/dev/null
+        fi
+        
+        # Меняем шелл через надежный dscl вместо капризного chsh
+        sudo dscl . -create "$HOME" UserShell "$ZSH_PATH"
     else
+        # На Linux меняем через стандартный chsh
         sudo chsh -s "$ZSH_PATH" "$USER"
     fi
+    
+    # Проверяем, успешно ли применилась команда
+    if [ $? -eq 0 ]; then
+        echo "🎉 Shell successfully changed to $ZSH_PATH!"
+    else
+        echo "⚠️ Warning: Shell change failed (maybe wrong password?)."
+        echo "Skipping shell switch for now. You can change it manually later via: chsh -s $ZSH_PATH"
+    fi
+    
+    # ВОЗВРАЩАЕМ СТРОГИЙ РЕЖИМ ОТСЛЕЖИВАНИЯ ОШИБОК ОБРАТНО
+    set -e
 else
     echo "Zsh is already your default shell."
 fi
 
+
+
 # === 4. DEPLOYING OH MY ZSH ===
+
 ZSH_DIR="$HOME/.oh-my-zsh"
 if [ ! -d "$ZSH_DIR" ]; then
     echo "Oh My Zsh not found. Running official installer via curl..."
