@@ -119,38 +119,40 @@ fi
 
 ZSH_PATH=$(which zsh 2>/dev/null)
 
-if [ "$SHELL" != "$ZSH_PATH" ]; then
-    echo "Changing default shell to $ZSH_PATH..."
+# Определяем, какой шелл СЕЙЧАС прописан дефолтным для юзера в системе
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    # На Mac достаем значение UserShell из OpenDirectory
+    CURRENT_SYSTEM_SHELL=$(dscl . -read "$HOME" UserShell 2>/dev/null | awk '{print $2}')
+else
+    # На Linux берем седьмое поле из fstab/passwd для текущего юзера
+    CURRENT_SYSTEM_SHELL=$(getent passwd "$USER" | cut -d: -f7)
+fi
+
+# Если системный дефолт не совпадает с путем к новому Zsh — меняем
+if [ "$CURRENT_SYSTEM_SHELL" != "$ZSH_PATH" ]; then
+    echo "Changing default shell from $CURRENT_SYSTEM_SHELL to $ZSH_PATH..."
     
-    # ВРЕМЕННО ОТКЛЮЧАЕМ ПАДЕНИЕ СКРИПТА (Даже если промазали по паролю, скрипт выживет)
-    set +e
+    set +e # Временно отключаем падение, если юзер ошибется в пароле
     
     if [[ "$OSTYPE" == "darwin"* ]]; then
-        # На macOS сначала обязательно добавляем Homebrew-zsh в белый список доверенных шеллов
         if ! grep -q "$ZSH_PATH" /etc/shells; then
             echo "Adding $ZSH_PATH to /etc/shells trusted list (requires sudo)..."
             echo "$ZSH_PATH" | sudo tee -a /etc/shells >/dev/null
         fi
-        
-        # Меняем шелл через надежный dscl вместо капризного chsh
         sudo dscl . -create "$HOME" UserShell "$ZSH_PATH"
     else
-        # На Linux меняем через стандартный chsh
         sudo chsh -s "$ZSH_PATH" "$USER"
     fi
     
-    # Проверяем, успешно ли применилась команда
     if [ $? -eq 0 ]; then
         echo "🎉 Shell successfully changed to $ZSH_PATH!"
     else
-        echo "⚠️ Warning: Shell change failed (maybe wrong password?)."
-        echo "Skipping shell switch for now. You can change it manually later via: chsh -s $ZSH_PATH"
+        echo "⚠️ Warning: Shell change failed. You can do it manually later."
     fi
     
-    # ВОЗВРАЩАЕМ СТРОГИЙ РЕЖИМ ОТСЛЕЖИВАНИЯ ОШИБОК ОБРАТНО
-    set -e
+    set -e # Возвращаем строгий режим
 else
-    echo "Zsh is already your default shell."
+    echo "Zsh ($ZSH_PATH) is already configured as your default system shell. Skipping."
 fi
 
 
