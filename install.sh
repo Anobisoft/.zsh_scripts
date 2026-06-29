@@ -1,0 +1,153 @@
+#!/bin/bash
+# Exit immediately if a command exits with a non-zero status
+set -e
+
+
+
+# === 1. CLONING SCRIPTS REPOSITORY ===
+
+ANOBI_PATH="${1:-$HOME/.scripts}"
+
+while [[ -d "$ANOBI_PATH" ]]; do
+    echo -e "Path '$ANOBI_PATH' already exists.\nPlease enter another one:"
+    read -r MANUAL_PATH
+    if [[ "$MANUAL_PATH" != /* ]]; then
+        ANOBI_PATH="$HOME/$MANUAL_PATH"
+    else
+        ANOBI_PATH="$MANUAL_PATH"
+    fi
+done
+
+echo "Cloning Anobisoft scripts repository into $ANOBI_PATH..."
+git clone https://github.com/Anobisoft/.scripts "$ANOBI_PATH"
+
+
+
+# === 2. DETECTING OS AND INSTALLING ZSH ===
+
+echo "=== Checking if Zsh is installed ==="
+
+if ! command -v zsh &> /dev/null; then
+    echo "Zsh is not found. Detecting OS and installing..."
+
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        if ! command -v brew &> /dev/null; then
+            echo "Homebrew is required but not found. Starting interactive installation..."
+            set +e
+            /bin/bash -c "$(curl -fsSL https://githubusercontent.com)"
+            if [ -f /opt/homebrew/bin/brew ]; then
+                eval "$(/opt/homebrew/bin/brew shellenv)"
+            elif [ -f /usr/local/bin/brew ]; then
+                eval "$(/usr/local/bin/brew shellenv)"
+            fi
+            set -e
+            if ! command -v brew &> /dev/null; then
+                echo "Error: Homebrew installation failed." >&2
+                exit 1
+            fi
+        fi
+        echo "Updating Homebrew and installing Zsh..."
+        brew update
+        brew install zsh
+    elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
+        if command -v apt-get &> /dev/null; then
+            echo "Updating apt repositories and installing tools..."
+            sudo apt-get update
+            sudo apt-get install -y zsh mdadm smartmontools gnome-tweaks gnome-shell-extension-manager
+        elif command -v dnf &> /dev/null; then
+            sudo dnf install -y zsh
+        elif command -v pacman &> /dev/null; then
+            sudo pacman -S --noconfirm zsh
+        else
+            echo "Error: Unknown Linux distribution." >&2
+            exit 1
+        fi
+    else
+        echo "Error: Unsupported OS type: $OSTYPE" >&2
+        exit 1
+    fi
+    echo "🎉 Zsh successfully installed!"
+else
+    echo "Zsh is already installed."
+fi
+
+
+
+# === 3. CHANGING DEFAULT SHELL ===
+
+ZSH_PATH=$(which zsh 2>/dev/null)
+if [ "$SHELL" != "$ZSH_PATH" ]; then
+    echo "Changing default shell to $ZSH_PATH..."
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        chsh -s "$ZSH_PATH"
+    else
+        sudo chsh -s "$ZSH_PATH" "$USER"
+    fi
+else
+    echo "Zsh is already your default shell."
+fi
+
+# === 4. DEPLOYING OH MY ZSH ===
+ZSH_DIR="$HOME/.oh-my-zsh"
+if [ ! -d "$ZSH_DIR" ]; then
+    echo "Oh My Zsh not found. Running official installer via curl..."
+    set +e
+    env RUNZSH=no KEEP_ZSHRC=yes sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+    set -e
+else
+    echo "Oh My Zsh is already installed. Updating..."
+    (cd "$ZSH_DIR" && git pull)
+fi
+
+
+
+# === 5. INSTALLING ZSH PLUGINS ===
+
+ZSH_CUSTOM_PLUGINS="$HOME/.oh-my-zsh/custom/plugins"
+mkdir -p "$ZSH_CUSTOM_PLUGINS"
+
+install_or_update_plugin() {
+    local plugin_name=$1
+    local plugin_url="https://github.com/zsh-users/$1.git"
+    local target_dir="$ZSH_CUSTOM_PLUGINS/$plugin_name"
+
+    if [ ! -d "$target_dir" ]; then
+        echo "Installing plugin: $plugin_name..."
+        git clone "$plugin_url" "$target_dir"
+    else
+        echo "Plugin $plugin_name is already installed. Updating..."
+        (cd "$target_dir" && git pull)
+    fi
+}
+
+install_or_update_plugin "zsh-autosuggestions"
+install_or_update_plugin "zsh-syntax-highlighting"
+
+echo "🎉 Oh My Zsh and plugins successfully prepared!"
+
+
+
+# === 6. CONFIGURING CONFIG FILES ===
+
+echo "Deploying configurations..."
+cp "$ANOBI_PATH/.vimrc" "$HOME/.vimrc" || echo "No .vimrc found in repo, skipping."
+ZSHRC_FILE="$HOME/.zshrc"
+if [ ! -f "$ZSHRC_FILE" ]; then
+    cp "$ZSH_DIR/templates/zshrc.zsh-template" "$ZSHRC_FILE"
+fi
+
+# Apply regex-safe streaming updates to .zshrc
+sed -i 's/ZSH_THEME="robbyrussell"/ZSH_THEME=""/g' "$ZSHRC_FILE"
+sed -i 's/plugins=(git)/plugins=(git zsh-autosuggestions zsh-syntax-highlighting)/g' "$ZSHRC_FILE"
+sed -i 's/# HYPHEN_INSENSITIVE="true"/HYPHEN_INSENSITIVE="true"/g' "$ZSHRC_FILE"
+sed -i 's/# COMPLETION_WAITING_DOTS="true"/COMPLETION_WAITING_DOTS="true"/g' "$ZSHRC_FILE"
+sed -i 's/# DISABLE_UNTRACKED_FILES_DIRTY="true"/DISABLE_UNTRACKED_FILES_DIRTY="true"/g' "$ZSHRC_FILE"
+sed -i 's|^#\?\s*HIST_STAMPS=.*|HIST_STAMPS="yyyy-mm-dd"|g' "$ZSHRC_FILE"
+
+# Append Anobisoft loader to .zshrc
+if ! grep -q "source .anobirc" "$ZSHRC_FILE"; then
+    echo -e "\n# Anobisoft custom scripts entry\nexport PATH=\"\$PATH:$ANOBI_PATH\"\nsource .anobirc" >> "$ZSHRC_FILE"
+fi
+
+echo "🎉 [SUCCESS] Anobisoft environment installation is fully complete!"
+echo "Please restart your terminal or run: source ~/.zshrc"
