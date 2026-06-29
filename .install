@@ -209,20 +209,41 @@ sed -i 's/# COMPLETION_WAITING_DOTS="true"/COMPLETION_WAITING_DOTS="true"/g' "$Z
 sed -i 's/# DISABLE_UNTRACKED_FILES_DIRTY="true"/DISABLE_UNTRACKED_FILES_DIRTY="true"/g' "$ZSHRC_FILE"
 sed -i 's|^#\?\s*HIST_STAMPS=.*|HIST_STAMPS="yyyy-mm-dd"|g' "$ZSHRC_FILE"
 
-if [ -n "$GNU_PATHS" ]; then
-    if ! grep -q "export PATH=\"$GNU_PATHS" "$ZSHRC_FILE"; then
-        echo -e "\n# Core GNU Toolchain paths for macOS" >> "$ZSHRC_FILE"
-        echo "export PATH=\"$GNU_PATHS\$PATH\"" >> "$ZSHRC_FILE"
-    fi
+if ! grep -q "typeset -U path" "$ZSHRC_FILE"; then
+    echo "" >> "$ZSHRC_FILE"
+    echo "# Enable strict automatic PATH deduplication" >> "$ZSHRC_FILE"
+    echo "typeset -U path PATH" >> "$ZSHRC_FILE"
+fi
+
+if [ -n "$GNU_PATHS" ] && ! grep -q "Core GNU Toolchain paths" "$ZSHRC_FILE"; then
+    echo "" >> "$ZSHRC_FILE"
+    echo "# Core GNU Toolchain paths for macOS" >> "$ZSHRC_FILE"
+    echo "path=(\"${BREW_PREFIX}/opt/\"*/libexec/gnubin \$path)" >> "$ZSHRC_FILE"
+fi
+
+if ! grep -q "Anobisoft scripts path" "$ZSHRC_FILE"; then
+    echo "" >> "$ZSHRC_FILE"
+    echo "# Anobisoft scripts path configuration" >> "$ZSHRC_FILE"
+    # Добавляем путь в массив. typeset -U сам выкинет дубли, если они накопятся
+    echo "path+=(\"$ANOBI_PATH\")" >> "$ZSHRC_FILE"
 fi
 
 if ! grep -q "source .anobirc" "$ZSHRC_FILE"; then
-    # Наш красивый printf с идеальной табуляцией внутри скрипта
-    printf "\n%s\n%s\n%s\n%s\n" \
-        "# Anobisoft custom scripts entry" \
-        "plugins+=(\"zsh-autosuggestions\" \"zsh-syntax-highlighting\")" \
-        "export PATH=\"\$PATH:$ANOBI_PATH\"" \
-        "source .anobirc" >> "$ZSHRC_FILE"
+    echo "" >> "$ZSHRC_FILE"
+    echo "# Anobisoft custom scripts entry" >> "$ZSHRC_FILE"
+    echo "source .anobirc" >> "$ZSHRC_FILE"
+fi
+
+if ! grep -q "zsh-autosuggestions" "$ZSHRC_FILE"; then
+    echo "" >> "$ZSHRC_FILE"
+    echo "# Append zsh-autosuggestions to the existing array" >> "$ZSHRC_FILE"
+    echo 'plugins+=("zsh-autosuggestions")' >> "$ZSHRC_FILE"
+fi
+
+if ! grep -q "zsh-syntax-highlighting" "$ZSHRC_FILE"; then
+    echo "" >> "$ZSHRC_FILE"
+    echo "# Append zsh-syntax-highlighting to the existing array" >> "$ZSHRC_FILE"
+    echo 'plugins+=("zsh-syntax-highlighting")' >> "$ZSHRC_FILE"
 fi
 
 echo "🎉 [SUCCESS] Anobisoft environment installation is fully complete!"
