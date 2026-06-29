@@ -1,28 +1,21 @@
-TMOUT=1
+# Переключаем zsh в режим динамического вычисления переменных в промпте
+setopt PROMPT_SUBST
 
-TRAPALRM() {
-    zle reset-prompt
-}
-
-# Load colors
-autoload -U colors && colors
-
-# Load version control information
-autoload -Uz vcs_info
-precmd() { vcs_info }
-
-# SSH host
+# Инициализация SSH (выполняется строго один раз при старте шелла)
 if [ -n "$SSH_CONNECTION" ]; then
     SSH_HOST='%F{087}%n%f@%F{cyan}%m '
 else
     SSH_HOST=''
 fi
 
-# Format the vcs_info_msg_0_ variable
-zstyle ':vcs_info:git:*' formats "%{$fg[blue]%}%r%{$reset_color%}/%{$fg[grey]%}%S %{$fg[green]%}%b%{$reset_color%}%m%u%c%{$reset_color%} "
+# Настройка отображения Git (ваши цвета, ветка уйдёт направо)
+ZSH_THEME_GIT_PROMPT_PREFIX="%{$fg[blue]%}git%{$reset_color%}:%{$fg[green]%}"
+ZSH_THEME_GIT_PROMPT_SUFFIX="%{$reset_color%}"
+ZSH_THEME_GIT_PROMPT_DIRTY="%{$fg[yellow]%}*%{$reset_color%}"
+ZSH_THEME_GIT_PROMPT_CLEAN=""
 
-# Set up the prompt (with git branch name)
-setopt PROMPT_SUBST
+# ЛЕВЫЙ ПРОМПТ: ваши цвета, дата, точное время %T и знак %# (без инфо о Git)
 PROMPT='$SSH_HOST%F{green}%D{%Y-%m-%d} %F{084}%T %F{blue}%1~ %F{red}%#%f '
-RPROMPT='$vcs_info_msg_0_'
 
+# ПРАВЫЙ ПРОМПТ: информация о ветке Git теперь живет здесь
+RPROMPT='\$(git_prompt_info)'
