@@ -215,13 +215,18 @@ sed -i 's/# COMPLETION_WAITING_DOTS="true"/COMPLETION_WAITING_DOTS="true"/g' "$Z
 sed -i 's/# DISABLE_UNTRACKED_FILES_DIRTY="true"/DISABLE_UNTRACKED_FILES_DIRTY="true"/g' "$ZSHRC_FILE"
 sed -i 's|^#\?\s*HIST_STAMPS=.*|HIST_STAMPS="yyyy-mm-dd"|g' "$ZSHRC_FILE"
 
-# Append Anobisoft loader and GNU environment mapping to .zshrc safely
-if ! grep -q "source .anobirc" "$ZSHRC_FILE"; then
-    echo -e "\n# Anobisoft custom scripts entry" >> "$ZSHRC_FILE"
-    if [ -n "$GNU_PATHS" ]; then
+if [ -n "$GNU_PATHS" ]; then
+    if ! grep -q "export PATH=\"$GNU_PATHS" "$ZSHRC_FILE"; then
+        echo -e "\n# Core GNU Toolchain paths for macOS" >> "$ZSHRC_FILE"
         echo "export PATH=\"$GNU_PATHS\$PATH\"" >> "$ZSHRC_FILE"
     fi
-    echo -e "export PATH=\"\$PATH:$ANOBI_PATH\"\source .anobirc" >> "$ZSHRC_FILE"
+fi
+
+if ! grep -q "source .anobirc" "$ZSHRC_FILE"; then
+    printf "\n%s\n%s\n%s\n" \
+        "# Anobisoft custom scripts entry" \
+        "export PATH=\"\$PATH:$ANOBI_PATH\"" \
+        "source .anobirc" >> "$ZSHRC_FILE"
 fi
 
 echo "🎉 [SUCCESS] Anobisoft environment installation is fully complete!"
