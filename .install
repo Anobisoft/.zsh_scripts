@@ -8,18 +8,43 @@ set -e
 
 ANOBI_PATH="${1:-$HOME/.scripts}"
 
-while [[ -d "$ANOBI_PATH" ]]; do
-    echo -e "Path '$ANOBI_PATH' already exists.\nPlease enter another one:"
-    read -r MANUAL_PATH
-    if [[ "$MANUAL_PATH" != /* ]]; then
-        ANOBI_PATH="$HOME/$MANUAL_PATH"
+while true; do
+    if [ -d "$ANOBI_PATH" ]; then
+        REPO_URL=$(cd "$ANOBI_PATH" && git remote get-url origin 2>/dev/null || echo "")
+        if [[ "$REPO_URL" == *Anobisoft* ]]; then
+            echo "Valid Anobisoft repository detected at '$ANOBI_PATH'. Updating..."
+            (
+                cd "$ANOBI_PATH"
+                if [ -n "$(git status --porcelain)" ]; then
+                    echo "📦 Local changes detected! Running 'git stash' to save your work temporarily..."
+                    git stash
+                    HAS_STASH=true
+                fi
+                echo "🔄 Switching to the default branch..."
+                git checkout main 2>/dev/null || git checkout master
+                echo "📥 Pulling latest updates from GitHub..."
+                git pull
+                if [ "$HAS_STASH" = true ]; then
+                    echo "🎁 Restoring your saved local changes via 'git stash pop'..."
+                    git stash pop 2>/dev/null || echo "⚠️ Warning: Could not restore stash automatically."
+                fi
+            )
+            break
+        else
+            echo -e "⚠️ Error: Directory '$ANOBI_PATH' exists but is NOT an Anobisoft repository!\nPlease enter another path:"
+            read -r MANUAL_PATH
+            if [[ "$MANUAL_PATH" != /* ]]; then
+                ANOBI_PATH="$HOME/$MANUAL_PATH"
+            else
+                ANOBI_PATH="$MANUAL_PATH"
+            fi
+        fi
     else
-        ANOBI_PATH="$MANUAL_PATH"
+        echo "Cloning Anobisoft scripts repository into $ANOBI_PATH..."
+        git clone https://github.com/Anobisoft/.scripts "$ANOBI_PATH"
+        break
     fi
 done
-
-echo "Cloning Anobisoft scripts repository into $ANOBI_PATH..."
-git clone https://github.com/Anobisoft/.scripts "$ANOBI_PATH"
 
 
 
