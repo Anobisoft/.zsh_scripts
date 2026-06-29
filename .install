@@ -87,6 +87,11 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
         fi
     done
 
+    if [ -n "$GNU_PATHS" ]; then
+        export PATH="$GNU_PATHS$PATH"
+        echo "GNU toolchain activated for the current installation process."
+    fi
+
 elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
     # --- Linux (Ubuntu / Debian) ---
     if ! command -v zsh &> /dev/null; then
