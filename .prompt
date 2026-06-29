@@ -18,4 +18,4 @@ ZSH_THEME_GIT_PROMPT_CLEAN=""
 PROMPT='$SSH_HOST%F{green}%D{%Y-%m-%d} %F{084}%T %F{blue}%1~ %F{red}%#%f '
 
 # ПРАВЫЙ ПРОМПТ: информация о ветке Git теперь живет здесь
-RPROMPT=' \$(git_prompt_info)'
+RPROMPT="\$(git_prompt_info)"
