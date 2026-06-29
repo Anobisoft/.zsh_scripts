@@ -1,8 +1,8 @@
 tabs 4
 
 # Prompt
-source $HOME/.zsh_scripts/.zshprompt
+source $HOME/.scripts/.zshprompt
 
 # Aliases
-source $HOME/.zsh_scripts/.aliases
+source $HOME/.scripts/.aliases
 
