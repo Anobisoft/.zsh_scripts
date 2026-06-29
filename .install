@@ -71,10 +71,7 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
     
     echo "Installing complete GNU Toolset and Zsh via Homebrew..."
     brew update
-    # Накатываем полный фарш GNU взамен родных утилит macOS
     brew install zsh gawk diffutils wget coreutils findutils grep gnu-sed binutils curl
-    
-    # Определяем префикс Homebrew для корректного маппинга путей (M1/M2/M3 vs Intel)
     BREW_PREFIX=$(brew --prefix)
 
     # Генерируем пути экспорта для активации GNU утилит БЕЗ префикса 'g'
@@ -119,20 +116,18 @@ fi
 
 ZSH_PATH=$(which zsh 2>/dev/null)
 
-# Определяем, какой шелл СЕЙЧАС прописан дефолтным для юзера в системе
 if [[ "$OSTYPE" == "darwin"* ]]; then
-    # На Mac достаем значение UserShell из OpenDirectory
+    ZSH_PATH="$(brew --prefix)/bin/zsh"
     CURRENT_SYSTEM_SHELL=$(dscl . -read "/Users/$USER" UserShell 2>/dev/null | awk '{print $2}')
 else
-    # На Linux берем седьмое поле из fstab/passwd для текущего юзера
+    ZSH_PATH=$(which zsh 2>/dev/null)
     CURRENT_SYSTEM_SHELL=$(getent passwd "$USER" | cut -d: -f7)
 fi
 
-# Если системный дефолт не совпадает с путем к новому Zsh — меняем
 if [ "$CURRENT_SYSTEM_SHELL" != "$ZSH_PATH" ]; then
     echo "Changing default shell from $CURRENT_SYSTEM_SHELL to $ZSH_PATH..."
     
-    set +e # Временно отключаем падение, если юзер ошибется в пароле
+    set +e
     
     if [[ "$OSTYPE" == "darwin"* ]]; then
         if ! grep -q "$ZSH_PATH" /etc/shells; then
@@ -150,7 +145,7 @@ if [ "$CURRENT_SYSTEM_SHELL" != "$ZSH_PATH" ]; then
         echo "⚠️ Warning: Shell change failed. You can do it manually later."
     fi
     
-    set -e # Возвращаем строгий режим
+    set -e
 else
     echo "Zsh ($ZSH_PATH) is already configured as your default system shell. Skipping."
 fi
@@ -207,9 +202,8 @@ if [ ! -f "$ZSHRC_FILE" ]; then
     cp "$ZSH_DIR/templates/zshrc.zsh-template" "$ZSHRC_FILE"
 fi
 
-# Apply regex-safe streaming updates to .zshrc using alternate separator '|'
+echo "Tuning .zshrc settings via GNU sed..."
 sed -i 's/ZSH_THEME="robbyrussell"/ZSH_THEME=""/g' "$ZSHRC_FILE"
-sed -i 's/plugins=(git)/plugins=(git zsh-autosuggestions zsh-syntax-highlighting)/g' "$ZSHRC_FILE"
 sed -i 's/# HYPHEN_INSENSITIVE="true"/HYPHEN_INSENSITIVE="true"/g' "$ZSHRC_FILE"
 sed -i 's/# COMPLETION_WAITING_DOTS="true"/COMPLETION_WAITING_DOTS="true"/g' "$ZSHRC_FILE"
 sed -i 's/# DISABLE_UNTRACKED_FILES_DIRTY="true"/DISABLE_UNTRACKED_FILES_DIRTY="true"/g' "$ZSHRC_FILE"
@@ -223,8 +217,10 @@ if [ -n "$GNU_PATHS" ]; then
 fi
 
 if ! grep -q "source .anobirc" "$ZSHRC_FILE"; then
-    printf "\n%s\n%s\n%s\n" \
+    # Наш красивый printf с идеальной табуляцией внутри скрипта
+    printf "\n%s\n%s\n%s\n%s\n" \
         "# Anobisoft custom scripts entry" \
+        "plugins+=(\"zsh-autosuggestions\" \"zsh-syntax-highlighting\")" \
         "export PATH=\"\$PATH:$ANOBI_PATH\"" \
         "source .anobirc" >> "$ZSHRC_FILE"
 fi
