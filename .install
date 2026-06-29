@@ -122,7 +122,7 @@ ZSH_PATH=$(which zsh 2>/dev/null)
 # Определяем, какой шелл СЕЙЧАС прописан дефолтным для юзера в системе
 if [[ "$OSTYPE" == "darwin"* ]]; then
     # На Mac достаем значение UserShell из OpenDirectory
-    CURRENT_SYSTEM_SHELL=$(dscl . -read "$HOME" UserShell 2>/dev/null | awk '{print $2}')
+    CURRENT_SYSTEM_SHELL=$(dscl . -read "/Users/$USER" UserShell 2>/dev/null | awk '{print $2}')
 else
     # На Linux берем седьмое поле из fstab/passwd для текущего юзера
     CURRENT_SYSTEM_SHELL=$(getent passwd "$USER" | cut -d: -f7)
