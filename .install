@@ -194,57 +194,72 @@ echo "🎉 Oh My Zsh and plugins successfully prepared!"
 
 
 # === 6. CONFIGURING CONFIG FILES ===
-
 echo "Deploying configurations..."
 cp "$ANOBI_PATH/.vimrc" "$HOME/.vimrc" || echo "No .vimrc found in repo, skipping."
+
 ZSHRC_FILE="$HOME/.zshrc"
 if [ ! -f "$ZSHRC_FILE" ]; then
     cp "$ZSH_DIR/templates/zshrc.zsh-template" "$ZSHRC_FILE"
 fi
 
-echo "Tuning .zshrc settings via GNU sed..."
-sed -i 's/ZSH_THEME="robbyrussell"/ZSH_THEME=""/g' "$ZSHRC_FILE"
-sed -i 's/# HYPHEN_INSENSITIVE="true"/HYPHEN_INSENSITIVE="true"/g' "$ZSHRC_FILE"
-sed -i 's/# COMPLETION_WAITING_DOTS="true"/COMPLETION_WAITING_DOTS="true"/g' "$ZSHRC_FILE"
-sed -i 's/# DISABLE_UNTRACKED_FILES_DIRTY="true"/DISABLE_UNTRACKED_FILES_DIRTY="true"/g' "$ZSHRC_FILE"
-sed -i 's|^#\?\s*HIST_STAMPS=.*|HIST_STAMPS="yyyy-mm-dd"|g' "$ZSHRC_FILE"
+# КЕЙС-ОБРАБОТЧИК 1: Если в файле вообще нет базового запуска Oh My Zsh
+if ! grep -q "oh-my-zsh.sh" "$ZSHRC_FILE"; then
+    echo "Oh My Zsh startup code not found in $ZSHRC_FILE. Injecting core framework skeleton..."
+    TEMP_ZSHRC=$(mktemp)
+    cat << EOF > "$TEMP_ZSHRC"
+# Core Oh My Zsh initialization
+export ZSH="\$HOME/.oh-my-zsh"
+ZSH_THEME=""
+plugins=(git)
 
-if ! grep -q "typeset -U path" "$ZSHRC_FILE"; then
-    echo "" >> "$ZSHRC_FILE"
-    echo "# Enable strict automatic PATH deduplication" >> "$ZSHRC_FILE"
-    echo "typeset -U path PATH" >> "$ZSHRC_FILE"
+source \$ZSH/oh-my-zsh.sh
+
+EOF
+    cat "$ZSHRC_FILE" >> "$TEMP_ZSHRC"
+    mv "$TEMP_ZSHRC" "$ZSHRC_FILE"
 fi
 
-if [ -n "$GNU_PATHS" ] && ! grep -q "Core GNU Toolchain paths" "$ZSHRC_FILE"; then
-    echo "" >> "$ZSHRC_FILE"
-    echo "# Core GNU Toolchain paths for macOS" >> "$ZSHRC_FILE"
-    echo "path=(\"${BREW_PREFIX}/opt/\"*/libexec/gnubin \$path)" >> "$ZSHRC_FILE"
+echo "Tuning .zshrc settings safely..."
+
+if ! grep -q "^[[:space:]]*ZSH_THEME=" "$ZSHRC_FILE" || grep -q '^ZSH_THEME="robbyrussell"' "$ZSHRC_FILE"; then
+    sed -i 's|^#\?\s*ZSH_THEME=.*|ZSH_THEME=""|g' "$ZSHRC_FILE"
 fi
 
-if ! grep -q "Anobisoft scripts path" "$ZSHRC_FILE"; then
-    echo "" >> "$ZSHRC_FILE"
-    echo "# Anobisoft scripts path configuration" >> "$ZSHRC_FILE"
-    # Добавляем путь в массив. typeset -U сам выкинет дубли, если они накопятся
-    echo "path+=(\"$ANOBI_PATH\")" >> "$ZSHRC_FILE"
+if ! grep -q "^[[:space:]]*HYPHEN_INSENSITIVE=" "$ZSHRC_FILE"; then
+    sed -i 's|^#\s*HYPHEN_INSENSITIVE="true"|HYPHEN_INSENSITIVE="true"|g' "$ZSHRC_FILE"
 fi
 
-if ! grep -q "source .anobirc" "$ZSHRC_FILE"; then
-    echo "" >> "$ZSHRC_FILE"
-    echo "# Anobisoft custom scripts entry" >> "$ZSHRC_FILE"
-    echo "source .anobirc" >> "$ZSHRC_FILE"
+if ! grep -q "^[[:space:]]*COMPLETION_WAITING_DOTS=" "$ZSHRC_FILE"; then
+    sed -i 's|^#\s*COMPLETION_WAITING_DOTS="true"|COMPLETION_WAITING_DOTS="true"|g' "$ZSHRC_FILE"
+fi
+
+if ! grep -q "^[[:space:]]*DISABLE_UNTRACKED_FILES_DIRTY=" "$ZSHRC_FILE"; then
+    sed -i 's|^#\s*DISABLE_UNTRACKED_FILES_DIRTY="true"|DISABLE_UNTRACKED_FILES_DIRTY="true"|g' "$ZSHRC_FILE"
+fi
+
+if ! grep -q "^[[:space:]]*HIST_STAMPS=" "$ZSHRC_FILE"; then
+    sed -i 's|^#\?\s*HIST_STAMPS=.*|HIST_STAMPS="yyyy-mm-dd"|g' "$ZSHRC_FILE"
 fi
 
 if ! grep -q "zsh-autosuggestions" "$ZSHRC_FILE"; then
-    echo "" >> "$ZSHRC_FILE"
-    echo "# Append zsh-autosuggestions to the existing array" >> "$ZSHRC_FILE"
-    echo 'plugins+=("zsh-autosuggestions")' >> "$ZSHRC_FILE"
+    sed -i '/source $ZSH\/oh-my-zsh.sh/i \plugins+=("zsh-autosuggestions")' "$ZSHRC_FILE"
 fi
 
 if ! grep -q "zsh-syntax-highlighting" "$ZSHRC_FILE"; then
-    echo "" >> "$ZSHRC_FILE"
-    echo "# Append zsh-syntax-highlighting to the existing array" >> "$ZSHRC_FILE"
-    echo 'plugins+=("zsh-syntax-highlighting")' >> "$ZSHRC_FILE"
+    sed -i '/source $ZSH\/oh-my-zsh.sh/i \plugins+=("zsh-syntax-highlighting")' "$ZSHRC_FILE"
 fi
+
+if [ -n "$GNU_PATHS" ] && ! grep -q "Core GNU Toolchain paths" "$ZSHRC_FILE"; then
+    echo -e "\n# Enable strict automatic PATH deduplication\ntypeset -U path PATH" >> "$ZSHRC_FILE"
+    echo -e "\n# Core GNU Toolchain paths for macOS\npath=(\"${BREW_PREFIX}/opt/\"*/libexec/gnubin \$path)" >> "$ZSHRC_FILE"
+fi
+
+if ! grep -q "source .anobirc" "$ZSHRC_FILE"; then
+    echo -e "\n# Anobisoft scripts path configuration\npath+=(\"$ANOBI_PATH\")" >> "$ZSHRC_FILE"
+    echo -e "\n# Anobisoft custom scripts entry\nsource .anobirc" >> "$ZSHRC_FILE"
+fi
+
+
 
 echo "🎉 [SUCCESS] Anobisoft environment installation is fully complete!"
 echo "Please restart your terminal or run: source ~/.zshrc"
